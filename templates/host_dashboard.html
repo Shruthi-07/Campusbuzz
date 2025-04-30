@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Host Dashboard - CampusBuzz</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='host_dashboard.css') }}">
+</head>
+<body>
+    <!-- Header with Navigation -->
+    <header>
+        <a href="{{ url_for('index') }}" class="logo">
+            <span>CampusBuzz</span>
+        </a>
+        <div class="toggle"></div>
+        <ul class="menu">
+            <li><a href="{{ url_for('index') }}">HOME</a></li>
+            <li><a href="{{ url_for('host_dashboard') }}" class="active">DASHBOARD</a></li>
+            <li><a href="#" id="create-event-btn">CREATE EVENT</a></li>
+            <li><a href="#past-events">EVENT HISTORY</a></li>
+            <li><a href="{{ url_for('index') }}#about-us">ABOUT US</a></li>
+        </ul>
+        <div class="header-right">
+            <div class="dropdown">
+                <a href="#" class="login-btn">
+                    <i class="fas fa-user-circle"></i> {{ session.name }}
+                </a>
+                <div class="dropdown-content">
+                    <a href="#profile-section">My Profile</a>
+                    <a href="{{ url_for('logout') }}">Logout</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Dashboard Content -->
+    <main class="dashboard-container">
+        <!-- Welcome Banner -->
+        <section class="welcome-section">
+            <div class="welcome-content">
+                <h1>Welcome, {{ session.name }}!</h1>
+                <p>Manage your events and keep track of participant registrations all in one place.</p>
+            </div>
+        </section>
+
+        <!-- Host Profile Section -->
+        <section id="profile-section" class="profile-section">
+            <div class="section-header">
+                <h2>My Profile</h2>
+                <div class="separator">
+                    <span></span>
+                    <i class="fas fa-user"></i>
+                    <span></span>
+                </div>
+            </div>
+            
+            <div class="profile-content">                
+                <div class="profile-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Name:</span>
+                        <span class="detail-value">{{ session.name }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Email:</span>
+                        <span class="detail-value">{{ session.email }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Designation:</span>
+                        <span class="detail-value">{{ host_data.designation }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Department/Club:</span>
+                        <span class="detail-value">{{ host_data.department_club }}</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Current Events Section -->
+        <section id="current-events" class="events-section">
+            <div class="section-header">
+                <h2>My Active Events</h2>
+                <div class="separator">
+                    <span></span>
+                    <i class="fas fa-calendar-alt"></i>
+                    <span></span>
+                </div>
+            </div>
+            
+            <div class="events-container">
+                {% if active_events %}
+                    {% for event in active_events %}
+                        <div class="event-card">
+                            <div class="event-image">
+                                <img src="{{ url_for('static', filename=event.image_url) }}" alt="{{ event.title }}">
+                            </div>
+                            <div class="event-details">
+                                <h3>{{ event.title }}</h3>
+                                <div class="event-info">
+                                    <p><i class="fas fa-map-marker-alt"></i> {{ event.venue }}</p>
+                                    <p><i class="fas fa-calendar-day"></i> {{ event.date }}</p>
+                                    <p><i class="fas fa-clock"></i> {{ event.time }}</p>
+                                </div>
+                                <div class="event-description">
+                                    <p>{{ event.description[:100] }}{% if event.description|length > 100 %}...{% endif %}</p>
+                                </div>
+                                <div class="event-stats">
+                                    <span><i class="fas fa-user-check"></i> {{ event.registrations }} Registrations</span>
+                                    <span><i class="fas fa-chair"></i> {{ event.capacity - event.registrations }} Seats Left</span>
+                                </div>
+                                <div class="event-actions">
+                                    <a href="#" class="view-registrations" data-event-id="{{ event.id }}">View Registrations</a>
+                                    <a href="#" class="cancel-event" data-event-id="{{ event.id }}">Cancel Event</a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="no-events-message">
+                        <i class="fas fa-calendar-times"></i>
+                        <p>You don't have any active events. Create a new event to get started!</p>
+                        <button id="no-events-create-btn" class="create-btn">Create Event</button>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- Past Events Section -->
+        <section id="past-events" class="events-section past-events">
+            <div class="section-header">
+                <h2>Past Events</h2>
+                <div class="separator">
+                    <span></span>
+                    <i class="fas fa-history"></i>
+                    <span></span>
+                </div>
+            </div>
+            
+            <div class="events-container">
+                {% if past_events %}
+                    {% for event in past_events %}
+                        <div class="event-card">
+                            <div class="event-image">
+                                <img src="{{ url_for('static', filename=event.image_url) }}" alt="{{ event.title }}">
+                            </div>
+                            <div class="event-details">
+                                <h3>{{ event.title }}</h3>
+                                <div class="event-info">
+                                    <p><i class="fas fa-map-marker-alt"></i> {{ event.venue }}</p>
+                                    <p><i class="fas fa-calendar-day"></i> {{ event.date }}</p>
+                                    <p><i class="fas fa-clock"></i> {{ event.time }}</p>
+                                </div>
+                                <div class="event-stats">
+                                    <span><i class="fas fa-user-check"></i> {{ event.registrations }} Attended</span>
+                                    <span><i class="fas fa-calendar-check"></i> Completed</span>
+                                </div>
+                                <div class="event-actions">
+                                    <a href="#" class="view-report" data-event-id="{{ event.id }}">View Report</a>
+                                    <a href="#" class="delete-past-event" data-event-id="{{ event.id }}">Delete</a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="no-events-message">
+                        <i class="fas fa-history"></i>
+                        <p>No past events found.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    </main>
+
+    <!-- Create Event Modal -->
+    <div id="create-event-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create New Event</h2>
+                <span class="close-modal">&times;</span>
+            </div>
+            <form id="create-event-form" method="post" action="{{ url_for('create_event') }}" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="event-title">Event Title <span class="required">*</span></label>
+                    <input type="text" id="event-title" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="event-description">Description <span class="required">*</span></label>
+                    <textarea id="event-description" name="description" rows="4" required></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="event-date">Date <span class="required">*</span></label>
+                        <input type="date" id="event-date" name="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-time">Time <span class="required">*</span></label>
+                        <input type="time" id="event-time" name="time" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="event-venue">Venue <span class="required">*</span></label>
+                    <input type="text" id="event-venue" name="venue" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="event-capacity">Participant Capacity <span class="required">*</span></label>
+                        <input type="number" id="event-capacity" name="capacity" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-type">Event Type <span class="required">*</span></label>
+                        <select id="event-type" name="event_type" required>
+                            <option value="">Select Event Type</option>
+                            <option value="cultural">Cultural</option>
+                            <option value="technical">Technical</option>
+                            <option value="sports">Sports</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="event-image">Event Poster <span class="required">*</span></label>
+                    <input type="file" id="event-image" name="event_image" accept="image/*" required>
+                    <small>Recommended size: 800x400 pixels</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="registration-deadline">Registration Deadline <span class="required">*</span></label>
+                    <input type="datetime-local" id="registration-deadline" name="registration_deadline" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="submit-btn">Create Event</button>
+                    <button type="button" class="cancel-btn" id="cancel-create-event">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Registrations Modal -->
+    <div id="registrations-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Event Registrations</h2>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body" id="registrations-container">
+                <!-- Registrations will be loaded dynamically -->
+                <div class="loader">Loading registrations...</div>
+            </div>
+            <div class="modal-footer">
+                <button id="download-registrations" class="download-btn">Download as Excel</button>
+                <button id="close-registrations" class="cancel-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='host_dashboard.js') }}"></script>
+</body>
+</html>

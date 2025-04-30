@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusBuzz - College Event Management System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+    <script>
+        window.addEventListener("beforeunload", function () {
+            localStorage.setItem("scrollY", window.scrollY);
+        });
+    </script>
+</head>
+<body id="home">
+    <!-- Header with Navigation -->
+    <header>
+        <a href="#" class="logo">
+            <span>CampusBuzz</span>
+        </a>
+        <div class="toggle"></div>
+        <ul class="menu">
+            <li><a href="#home" class="active">HOME</a></li>
+            <li><a href="#about-us">ABOUT US</a></li>
+            <li><a href="#events-section">EVENTS</a></li>
+            <li><a href="#gallery-section">EVENT GALLERY</a></li>
+            <li><a href="#testimonials-section">TESTIMONIALS</a></li>
+            <li><a href="#newsletter-section">NEWS</a></li>
+        </ul>
+        <div class="header-right">
+            <a href="tel:+911234567890" class="phone-number">
+                <i class="fas fa-phone-alt"></i> 08172-245317
+            </a>
+            {% if logged_in %}
+                <div class="dropdown">
+                    <a href="#" class="login-btn">
+                        <i class="fas fa-user-circle"></i> Account
+                    </a>
+                    <div class="dropdown-content">
+                        {% if session.usertype == 'student' %}
+                            <a href="{{ url_for('student_dashboard') }}">Dashboard</a>
+                        {% elif session.usertype == 'host' %}
+                            <a href="{{ url_for('host_dashboard') }}">Dashboard</a>
+                        {% endif %}
+                        <a href="{{ url_for('logout') }}">Logout</a>
+                    </div>
+                </div>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="login-btn">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </a>
+            {% endif %}
+        </div>
+    </header>
+
+    <!-- Hero Section with Slider -->
+    <section class="banner">
+        <div class="slide active" style="background-image: url('{{ url_for('static', filename='img_mce.jpeg') }}');"></div>
+        <div class="slide" style="background-image: url('{{ url_for('static', filename='img_img.jpeg') }}');"></div>
+        <div class="slide" style="background-image: url('{{ url_for('static', filename='img_jam.jpeg') }}');"></div>
+        <div class="slide" style="background-image: url('{{ url_for('static', filename='img_cse.jpeg') }}');"></div>
+        <div class="slide" style="background-image: url('{{ url_for('static', filename='img_dance.png') }}');"></div>
+        
+        <div class="slide-overlay">
+            <div class="hero-text">
+                <h3 class="small-title">MAKING COLLEGE EVENTS MEMORABLE</h3>
+                <h1 class="main-title">Your Campus, Your Vibe, Your Event.</h1>
+                <h2 class="tagline">The buzz around every event, all in one place.</h2>
+                
+                <div class="social-icons">
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="#"><i class="fab fa-youtube"></i></a>
+                    <a href="#"><i class="fab fa-facebook"></i></a>
+                    <a href="#"><i class="fab fa-linkedin"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                </div>
+                
+                <a href="#" class="contact-btn">Contact Us</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Us Section -->
+    <section id="about-us" class="about-section">
+        <div class="about-container">
+            <div class="about-header">
+                <h2>Malnad College Events</h2>
+                <div class="separator">
+                    <span></span>
+                    <i class="fas fa-calendar-alt"></i>
+                    <span></span>
+                </div>
+                <p class="about-subtitle">Where Learning Meets Celebration</p>
+            </div>
+            
+            <div class="about-content">
+                <div class="about-image">
+                    <div class="image-wrapper">
+                        <img src="{{ url_for('static', filename='img_mce.jpeg') }}" alt="Malnad College Events">
+
+                    </div>
+                </div>
+                
+                <div class="about-text">
+                    <h3>Vibrant Campus Life Through Events</h3>
+                    <div class="about-features">
+                        <div class="feature">
+                            <i class="fas fa-music"></i>
+                            <h4>Cultural Fests</h4>
+                            <p>Annual "Malnad Fest" showcasing talent across dance, music, theater, and literature</p>
+                        </div>
+                        <div class="feature">
+                            <i class="fas fa-football-ball"></i>
+                            <h4>Sports Events</h4>
+                            <p>"Malnad Sports Champions" with inter-department competitions in cricket, football, and athletics</p>
+                        </div>
+                        <div class="feature">
+                            <i class="fas fa-laptop-code"></i>
+                            <h4>Tech Workshops</h4>
+                            <p>Hands-on sessions in AI, robotics, IoT, and emerging technologies</p>
+                        </div>
+                        <div class="feature">
+                            <i class="fas fa-microphone-alt"></i>
+                            <h4>Expert Talks</h4>
+                            <p>"Malnad Insights" series featuring industry leaders and renowned academics</p>
+                        </div>
+                    </div>
+                    <a href="#events-section" class="learn-more">Explore Events <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="events-section" id="events-section">
+        <div class="section-header">
+            <h2>Upcoming Events</h2>
+            <div class="separator">
+                <span></span>
+                <i class="fas fa-bolt"></i>
+                <span></span>
+            </div>
+            <p class="section-subtitle">Don't miss out on the buzz happening around campus!</p>
+        </div>
+    
+        <!-- ✅ Insert filter bar here -->
+        <div class="filter-bar">
+            <button class="filter-btn active" data-type="all">All</button>
+            <button class="filter-btn" data-type="technical">Technical</button>
+            <button class="filter-btn" data-type="cultural">Cultural</button>
+            <button class="filter-btn" data-type="sports">Sports</button>
+        </div>
+    
+        <div class="events-container">
+            {% if events %}
+                {% for event in events %}
+                    <div class="event-card" data-type="{{ event.event_type|lower }}">
+                        <div class="event-image">
+                            {% if event.image_url %}
+                                <img src="{{ url_for('static', filename=event.image_url) }}" alt="{{ event.title }}">
+                            {% else %}
+                                <img src="{{ url_for('static', filename='default-event.jpg') }}" alt="Default Event Image">
+                            {% endif %}
+                        </div>
+                        <div class="event-info">
+                            <h3>{{ event.title }}</h3>
+                            <p class="event-meta">
+                                <i class="fas fa-calendar-day"></i> {{ event.date }} &nbsp;
+                                <i class="fas fa-clock"></i> {{ event.time }}
+                            </p>
+                            <p class="event-meta">
+                                <i class="fas fa-map-marker-alt"></i> {{ event.venue }}
+                            </p>
+                            <p class="event-meta">
+                                <i class="fas fa-user"></i> {{ event.host_name }} ({{ event.department_club }})
+                            </p>
+                            <p class="event-description">
+                                {{ event.description[:120] }}{% if event.description|length > 120 %}...{% endif %}
+                            </p>
+    
+                            {% if logged_in and session.usertype == 'student' %}
+                                <form action="{{ url_for('register_for_event', event_id=event.id) }}" method="POST">
+                                    <button type="submit" class="register-btn">Register</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p class="no-events">No upcoming events found.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Event Gallery Section -->
+    <section id="gallery-section" class="gallery-section">
+        <div class="section-header">
+            <h2>Event Gallery</h2>
+            <div class="separator">
+                <span></span>
+                <i class="fas fa-images"></i>
+                <span></span>
+            </div>
+            <p class="section-subtitle">Relive the memories of our past events</p>
+        </div>
+
+        <div class="gallery-filter">
+            <button class="gallery-filter-btn active" data-category="all">All Events</button>
+            <button class="gallery-filter-btn" data-category="cultural">Cultural</button>
+            <button class="gallery-filter-btn" data-category="technical">Technical</button>
+            <button class="gallery-filter-btn" data-category="sports">Sports</button>
+        </div>
+
+        <div class="gallery-container">
+            <div class="gallery-item" data-category="cultural">
+                <img src="{{ url_for('static', filename='img_jam.jpeg') }}" alt="Cultural Event">
+                <div class="gallery-overlay">
+                    <h3>Malnad Fest</h3>
+                    <p>Literary Club</p>
+                </div>
+            </div>
+            <div class="gallery-item" data-category="technical">
+                <img src="{{ url_for('static', filename='img_workshop.jpeg') }}" alt="Technical Event">
+                <div class="gallery-overlay">
+                    <h3>Tech Workshop</h3>
+                    <p>Me-Riise</p>
+                </div>
+            </div>
+            <div class="gallery-item" data-category="sports">
+                <img src="{{ url_for('static', filename='img_sports.jpeg') }}" alt="Sports Event">
+                <div class="gallery-overlay">
+                    <h3>Inter-College Tournament</h3>
+                    <p>MCE</p>
+                </div>
+            </div>
+            <div class="gallery-item" data-category="cultural">
+                <img src="{{ url_for('static', filename='img_auto.jpeg') }}" alt="Cultural Event">
+                <div class="gallery-overlay">
+                    <h3>Auto Expo</h3>
+                    <p>Rotract Club</p>
+                </div>
+            </div>
+            <div class="gallery-item" data-category="technical">
+                <img src="{{ url_for('static', filename='img_cse.jpeg') }}" alt="Technical Event">
+                <div class="gallery-overlay">
+                    <h3>Earth Day</h3>
+                    <p>CSE Dept</p>
+                </div>
+            </div>
+            <div class="gallery-item" data-category="cultural">
+                <img src="{{ url_for('static', filename='img_enigma.jpeg') }}" alt="Cultural">
+                <div class="gallery-overlay">
+                    <h3>Enigma</h3>
+                    <p>Technical Club</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section id="testimonials-section" class="testimonials-section">
+        <div class="section-header">
+            <h2>Student Experiences</h2>
+            <div class="separator">
+                <span></span>
+                <i class="fas fa-quote-right"></i>
+                <span></span>
+            </div>
+            <p class="section-subtitle">What our students say about CampusBuzz events</p>
+        </div>
+
+        <div class="testimonials-container">
+            <div class="testimonial">
+                <div class="testimonial-image">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+                <div class="testimonial-content">
+                    <p>"CampusBuzz made it incredibly easy to discover and register for events that matched my interests. The technical workshops I attended have significantly enhanced my skills!"</p>
+                    <h4>Priya S</h4>
+                    <p class="testimonial-meta">Computer Science, 3rd Year</p>
+                </div>
+            </div>
+
+            <div class="testimonial">
+                <div class="testimonial-image">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+                <div class="testimonial-content">
+                    <p>"As a newcomer to college, CampusBuzz helped me connect with different clubs and participate in events. It's been instrumental in making my first year memorable!"</p>
+                    <h4>Aditya Patel</h4>
+                    <p class="testimonial-meta">Mechanical Engineering, 1st Year</p>
+                </div>
+            </div>
+
+            <div class="testimonial">
+                <div class="testimonial-image">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+                <div class="testimonial-content">
+                    <p>"As an event organizer, CampusBuzz streamlined the entire management process. Our cultural fest had record attendance thanks to the platform's reach!"</p>
+                    <h4>Sidharth</h4>
+                    <p class="testimonial-meta">Cultural Secretary, Student Council</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Newsletter Section -->
+    <section id="newsletter-section" class="newsletter-section">
+        <div class="newsletter-container">
+            <div class="newsletter-content">
+                <h2>Stay Updated</h2>
+                <p>Subscribe to our website and never miss an event!</p>
+                <form class="newsletter-form" action="{{ url_for('login') }}">
+                    <input type="email" placeholder="Enter your email">
+                    <button type="submit">Login</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer Section -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-column">
+                <h3>CampusBuzz</h3>
+                <p>Making college events more accessible, organized, and memorable for everyone on campus.</p>
+                <div class="footer-social">
+                    <a href="#"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                </div>
+            </div>
+            
+            <div class="footer-column">
+                <h3>Quick Links</h3>
+                <ul class="footer-links">
+                    <li><a href="#home">Home</a></li>
+                    <li><a href="#about-us">About Us</a></li>
+                    <li><a href="#events-section">Events</a></li>
+                    <li><a href="#gallery-section">Gallery</a></li>
+                    <li><a href="#testimonials-section">Testimonials</a></li>
+                    <li><a href="#newsletter-section">Newsletter</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-column">
+                <h3>Contact Us</h3>
+                <ul class="footer-contact">
+                    <li><i class="fas fa-map-marker-alt"></i> Malnad College of Engineering, Hassan, Karnataka</li>
+                    <li><i class="fas fa-phone"></i> 08172-245317</li>
+                    <li><i class="fas fa-envelope"></i> info@campusbuzz.edu</li>
+                </ul>
+            </div>
+            
+        </div>
+        
+        <div class="footer-bottom">
+            <p>&copy; 2025 CampusBuzz - College Event Management System. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Back to Top Button -->
+    <a href="#home" class="back-to-top">
+        <i class="fas fa-arrow-up"></i>
+    </a>
+    
+    <div id="flashModal" class="flash-modal">
+        <div class="flash-modal-content" id="flashModalContent">
+            <span class="close-flash-modal" id="closeFlashModal">&times;</span>
+            <p id="flashMessageText"></p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='index.js') }}"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const flashMessages = {{ get_flashed_messages(with_categories=true) | tojson }};
+            
+            if (flashMessages.length > 0) {
+                const [category, message] = flashMessages[0];
+        
+                const modal = document.getElementById("flashModal");
+                const modalContent = document.getElementById("flashModalContent");
+                const messageText = document.getElementById("flashMessageText");
+                const closeBtn = document.getElementById("closeFlashModal");
+        
+                modal.style.display = "flex";
+                messageText.textContent = message;
+                modalContent.classList.add(category);
+        
+                // ✅ Prevent background scroll
+                document.body.classList.add('modal-open');
+        
+                function closeModal() {
+                    modal.style.display = "none";
+                    document.body.classList.remove('modal-open');
+                }
+        
+                closeBtn.onclick = closeModal;
+                modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+                setTimeout(closeModal, 4000);
+            }
+        });
+        document.addEventListener("DOMContentLoaded", function () {
+            const y = localStorage.getItem("scrollY");
+            if (y !== null) {
+                window.scrollTo(0, parseInt(y));
+                localStorage.removeItem("scrollY");
+            }
+        });
+        </script>
+</body>
+</html>

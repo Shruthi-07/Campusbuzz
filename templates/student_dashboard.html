@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - CampusBuzz</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body>
+    <!-- Header with Navigation -->
+    <header>
+        <a href="{{ url_for('index') }}" class="logo">
+            <span>CampusBuzz</span>
+        </a>
+        <div class="toggle"></div>
+        <ul class="menu">
+            <li><a href="{{ url_for('index') }}">HOME</a></li>
+            <li><a href="{{ url_for('index') }}#about-us">ABOUT US</a></li>
+            <li><a href="{{ url_for('index') }}#events-section">EVENTS</a></li>
+            <li><a href="{{ url_for('index') }}#gallery-section">EVENT GALLERY</a></li>
+            <li><a href="{{ url_for('index') }}#testimonials-section">TESTIMONIALS</a></li>
+            <li><a href="{{ url_for('index') }}#newsletter-section">NEWS</a></li>
+        </ul>
+        <div class="header-right">
+            <a href="tel:08172-245317" class="phone-number">
+                <i class="fas fa-phone-alt"></i> 08172-245317
+            </a>
+            <div class="dropdown">
+                <a href="#" class="login-btn active">
+                    <i class="fas fa-user-circle"></i> {{ student_data.name }}
+                </a>
+                <div class="dropdown-content">
+                    <a href="{{ url_for('student_dashboard') }}">Dashboard</a>
+                    <a href="{{ url_for('logout') }}">Logout</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Dashboard Content -->
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <div class="user-info">
+                <div class="user-avatar">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <h3>{{ student_data.name }}</h3>
+                <p>{{ student_data.roll_number }}</p>
+                <p>{{ student_data.department }}</p>
+            </div>
+            <ul class="sidebar-menu">
+                <li class="active" data-target="profile"><i class="fas fa-user"></i> My Profile</li>
+                <li data-target="registered-events"><i class="fas fa-calendar-check"></i> Registered Events</li>
+                <li data-target="past-events"><i class="fas fa-history"></i> Past Events</li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <!-- Profile Section -->
+            <div class="content-section active" id="profile">
+                <h2>My Profile</h2>
+                <div class="profile-card">
+                    <div class="profile-header">
+                        <div class="profile-icon">
+                            <i class="fas fa-user-graduate"></i>
+                        </div>
+                        <div class="profile-title">
+                            <h3>{{ student_data.name }}</h3>
+                            <p>Student</p>
+                        </div>
+                    </div>
+                    
+                    <div class="profile-details">
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="fas fa-id-card"></i> Roll Number:</span>
+                            <span class="detail-value">{{ student_data.roll_number }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="fas fa-envelope"></i> Email:</span>
+                            <span class="detail-value">{{ student_data.email }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="fas fa-phone"></i> Phone:</span>
+                            <span class="detail-value">{{ student_data.phone_number }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="fas fa-building"></i> Department:</span>
+                            <span class="detail-value">{{ student_data.department }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="fas fa-calendar-plus"></i> Joined:</span>
+                            <span class="detail-value">{{ student_data.created_at.strftime('%d %B, %Y') if student_data.created_at else 'N/A' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Registered Events Section -->
+            <div class="content-section" id="registered-events">
+                <h2>My Registered Events</h2>
+                <div class="events-grid">
+                    {% if active_registrations %}
+                        {% for reg in active_registrations %}
+                            <div class="event-card">
+                                <div class="event-image">
+                                    {% if reg.image_url %}
+                                        <img src="{{ url_for('static', filename=reg.image_url) }}" alt="{{ reg.title }}">
+                                    {% else %}
+                                        <img src="{{ url_for('static', filename='default-event.jpg') }}" alt="Default Event Image">
+                                    {% endif %}
+                                    <div class="event-type {{ reg.event_type|lower }}">{{ reg.event_type }}</div>
+                                </div>
+                                <div class="event-info">
+                                    <h3>{{ reg.title }}</h3>
+                                    <p class="event-meta">
+                                        <i class="fas fa-calendar-day"></i> {{ reg.date.strftime('%d %B, %Y') if reg.date else 'N/A' }} &nbsp;
+                                        <i class="fas fa-clock"></i>
+                                        {% if reg.time and reg.time.__class__.__name__ == 'timedelta' %}
+                                            {{ (reg.time.seconds // 3600) | string | zfill(2) }}:{{ ((reg.time.seconds // 60) % 60) | string | zfill(2) }}
+                                        {% elif reg.time %}
+                                            {{ reg.time.strftime('%I:%M %p') }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </p>
+                                    <p class="event-meta">
+                                        <i class="fas fa-map-marker-alt"></i> {{ reg.venue }}
+                                    </p>
+                                    <p class="event-meta">
+                                        <i class="fas fa-user"></i> {{ reg.host_name }} ({{ reg.department_club }})
+                                    </p>
+                                    <div class="event-footer">
+                                        <span class="registration-date"> Registered on: {{ reg.registration_date.strftime('%d %B, %Y') if reg.registration_date else 'N/A' }}</span>                                          
+                                        <button class="cancel-btn" data-event-id="{{ reg.event_id }}">Cancel Registration</button>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-events-message">
+                            <i class="fas fa-calendar-times"></i>
+                            <p>You haven't registered for any upcoming events yet.</p>
+                            <a href="{{ url_for('index') }}#events-section" class="browse-btn">Browse Events</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+           <!-- Past Events Section -->
+            <div class="content-section" id="past-events">
+                <h2>My Past Events</h2>
+                <div class="events-grid">
+                    {% if past_events %}
+                        {% for event in past_events %}
+                            <div class="event-card past">
+                                <div class="event-image">
+                                    {% if event.image_url %}
+                                        <img src="{{ url_for('static', filename=event.image_url) }}" alt="{{ event.title }}">
+                                    {% else %}
+                                        <img src="{{ url_for('static', filename='default-event.jpg') }}" alt="Default Event Image">
+                                    {% endif %}
+                                    <div class="event-type {{ event.event_type|lower }}">{{ event.event_type }}</div>
+                                </div>
+                                <div class="event-info">
+                                    <h3>{{ event.title }}</h3>
+                                    <p class="event-meta">
+                                        <i class="fas fa-calendar-day"></i> 
+                                        {{ event.date.strftime('%d %B, %Y') if event.date else 'N/A' }} &nbsp;
+                                        <i class="fas fa-clock"></i>
+                                        {% if event.time and event.time.__class__.__name__ == 'timedelta' %}
+                                            {{ (event.time.seconds // 3600) | string | zfill(2) }}:{{ ((event.time.seconds // 60) % 60) | string | zfill(2) }}
+                                        {% elif event.time %}
+                                            {{ event.time.strftime('%I:%M %p') }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </p>
+                                    <p class="event-meta">
+                                        <i class="fas fa-map-marker-alt"></i> {{ event.venue }}
+                                    </p>
+                                    <p class="event-meta">
+                                        <i class="fas fa-user"></i> {{ event.host_name }} ({{ event.department_club }})
+                                    </p>
+                                    <div class="event-status">
+                                        <span class="completed-badge">Completed</span>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-events-message">
+                            <i class="fas fa-history"></i>
+                            <p>You haven't participated in any past events yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal" id="cancelModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3>Cancel Registration</h3>
+            <p>Are you sure you want to cancel your registration for this event?</p>
+            <div class="modal-actions">
+                <button class="btn-secondary close-btn">No, Keep Registration</button>
+                <button class="btn-primary confirm-cancel-btn">Yes, Cancel Registration</button>
+            </div>
+        </div>
+    </div>
+    <div class="modal" id="registrationModal">
+        <div class="modal-content">
+            <span class="close-modal" id="closeRegModal">&times;</span>
+            <div id="registrationModalContent">
+                <!-- Content will be dynamically inserted here -->
+            </div>
+            <div class="modal-actions">
+                <button class="btn-primary" id="regModalOkBtn">OK</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Toggle sidebar on mobile
+        document.querySelector('.toggle').addEventListener('click', function() {
+            document.querySelector('.menu').classList.toggle('active');
+            this.classList.toggle('active');
+        });
+        
+        // Tab functionality
+        const tabs = document.querySelectorAll('.sidebar-menu li');
+        const sections = document.querySelectorAll('.content-section');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const target = tab.dataset.target;
+                
+                // Remove active class from all tabs and sections
+                tabs.forEach(t => t.classList.remove('active'));
+                sections.forEach(s => s.classList.remove('active'));
+                
+                // Add active class to current tab and section
+                tab.classList.add('active');
+                document.getElementById(target).classList.add('active');
+            });
+        });
+        
+        // Modal functionality
+        const modal = document.getElementById('cancelModal');
+        const cancelBtns = document.querySelectorAll('.cancel-btn');
+        const closeModal = document.querySelector('.close-modal');
+        const closeBtn = document.querySelector('.close-btn');
+        const confirmCancelBtn = document.querySelector('.confirm-cancel-btn');
+        let currentEventId = null;
+        
+        cancelBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentEventId = btn.dataset.eventId;
+                modal.style.display = 'flex';
+            });
+        });
+        
+        closeModal.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+        
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+        
+        confirmCancelBtn.addEventListener('click', () => {
+            if (currentEventId) {
+                window.location.href = `/cancel_registration/${currentEventId}`;
+            }
+        });
+        
+        window.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusBuzz - Login & Signup</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
+</head>
+<body>
+    <div class="auth-container">
+        <a href="{{ url_for('index') }}" class="home-link">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+
+        <div class="auth-image">
+            <div class="auth-image-text">
+                <h2>Welcome to CampusBuzz</h2>
+                <p>Your one-stop platform for managing and participating in college events at Malnad College of Engineering</p>
+                <div class="social-icons">
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="#"><i class="fab fa-youtube"></i></a>
+                    <a href="#"><i class="fab fa-facebook"></i></a>
+                    <a href="#"><i class="fab fa-linkedin"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <div class="auth-forms">
+            <div class="auth-header">
+                <h2>Account Access</h2>
+                <div class="separator">
+                    <span></span>
+                    <i class="fas fa-user-circle"></i>
+                    <span></span>
+                </div>
+            </div>
+
+            <div class="auth-tabs">
+                <div class="auth-tab active" data-tab="login">Login</div>
+                <div class="auth-tab" data-tab="signup">Sign Up</div>
+            </div>
+
+            <!-- Login Form -->
+            <div class="form-container login-form active">
+                <form class="auth-form" action="/login" method="post" id="loginForm">
+                    <div class="role-toggle">
+                        <div class="role-option active" data-role="student">Student</div>
+                        <div class="role-option" data-role="host">Host</div>
+                    </div>
+
+                    <!-- Hidden input for usertype -->
+                    <input type="hidden" name="usertype" id="login-usertype" value="student">
+
+                    <div class="form-group">
+                        <label for="login-username" id="username-label">Roll Number</label>
+                        <input type="text" id="login-username" class="form-control" name="username" required>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="password-field">
+                            <label for="login-password">Password</label>
+                            <input type="password" id="login-password" class="form-control" name="password" required>
+                            <div class="password-toggle"><i class="fas fa-eye"></i></div>
+                        </div>
+                    </div>
+
+                    <!-- Host-specific field - only shown when host is selected -->
+                    <div class="form-group host-secret" style="display: none;">
+                        <label for="host-secret-key">Host Secret Key</label>
+                        <input type="password" id="host-secret-key" class="form-control" name="host_secret_key">
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <div>
+                            <input type="checkbox" id="remember-me">
+                            <label for="remember-me">Remember me</label>
+                        </div>
+                        <a href="#" id="forgotPasswordLink" style="color: #8e44ad;">Forgot Password?</a>
+
+                    </div>
+
+                    <button type="submit" class="submit-btn">Login</button>
+
+                    <div class="form-footer">
+                        Don't have an account? <a href="#" class="switch-form" data-form="signup">Sign Up</a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Signup Form -->
+            <div class="form-container signup-form">
+                <form class="auth-form" action="/register" method="post" id="signupForm">
+                    <div class="role-toggle">
+                        <div class="role-option active" data-role="student">Student</div>
+                        <div class="role-option" data-role="host">Host</div>
+                    </div>
+
+                    <!-- Hidden input for usertype -->
+                    <input type="hidden" name="usertype" id="signup-usertype" value="student">
+                    <!-- Hidden input for phone verification status -->
+                    <input type="hidden" name="phone_verified" id="phone-verified" value="false">
+
+                    <div class="form-group">
+                        <label for="signup-name">Full Name</label>
+                        <input type="text" id="signup-name" class="form-control" name="name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="signup-email">Email</label>
+                        <input type="email" id="signup-email" class="form-control" name="email" required>
+                    </div>
+
+                    <!-- Phone number field with OTP verification -->
+                    <div class="form-group">
+                        <label for="signup-phone">Phone Number (with country code)</label>
+                        <div class="otp-input-container">
+                            <input type="text" id="signup-phone" class="form-control otp-input" name="phone_number" placeholder="+91xxxxxxxxxx" required>
+                        </div>
+                        
+                        <!-- OTP verification field (initially hidden) -->
+                        <div class="otp-field" id="otpField">
+                            <div class="otp-input-container">
+                                <input type="text" id="otp-input" class="form-control" placeholder="Enter 6-digit OTP" maxlength="6">
+                            </div>
+                            <div class="otp-timer" id="otpTimer"></div>
+                            <div class="otp-verification-status" id="otpStatus"></div>
+                        </div>
+                    </div>
+
+                    <div class="signup-fields student-fields active">
+                        <div class="form-group">
+                            <label for="roll-number">Roll Number</label>
+                            <input type="text" id="roll-number" class="form-control" name="roll_number">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="department">Department</label>
+                            <select id="department" class="form-control" name="department">
+                                <option value="">Select Department</option>
+                                <option value="CS">Computer Science</option>
+                                <option value="EC">Electronics & Communication</option>
+                                <option value="EE">Electrical Engineering</option>
+                                <option value="ME">Mechanical Engineering</option>
+                                <option value="CE">Civil Engineering</option>
+                                <option value="IS">Information Science</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="signup-fields host-fields">
+                        <div class="form-group">
+                            <label for="designation">Designation</label>
+                            <input type="text" id="designation" class="form-control" name="designation">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="department-host">Department/Club</label>
+                            <input type="text" id="department-host" class="form-control" name="department_club">
+                        </div>
+
+                        <!-- Add Host Secret Key field in the signup form -->
+                        <div class="form-group">
+                            <label for="secret-key">Host Secret Key</label>
+                            <input type="password" id="secret-key" class="form-control" name="secret_key">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="signup-password">Password</label>
+                        <input type="password" id="signup-password" class="form-control" name="password" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirm-password">Confirm Password</label>
+                        <input type="password" id="confirm-password" class="form-control" name="confirm-password" required>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <input type="checkbox" id="terms" required>
+                        <label for="terms">I agree to the <a href="#" style="color: #8e44ad;">Terms and Conditions</a></label>
+                    </div>
+
+                    <button type="submit" class="submit-btn" id="createAccountBtn">Generate OTP</button>
+                    <div class="form-footer">
+                        Already have an account? <a href="#" class="switch-form" data-form="login">Login</a>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Forgot Password Popup -->
+    <div class="popup-overlay" id="forgotPasswordOverlay">
+        <div class="popup">
+            <div class="popup-header">
+                <div class="popup-icon" id="forgotPasswordIcon">
+                    <i class="fas fa-key"></i>
+                </div>
+                <h3 class="popup-title">Password Recovery</h3>
+            </div>
+            
+            <!-- Step 1: Request OTP -->
+            <div class="forgot-password-step" id="forgotPasswordStep1">
+                <div class="popup-content">
+                    <p>Enter your details to reset your password</p>
+                    
+                    <div class="role-toggle" style="margin-bottom: 15px;">
+                        <div class="role-option active" data-role="student" id="forgotRoleStudent">Student</div>
+                        <div class="role-option" data-role="host" id="forgotRoleHost">Host</div>
+                    </div>
+                    
+                    <!-- Student fields (roll number) -->
+                    <div class="form-group" id="forgotStudentField">
+                        <label for="forgot-rollnumber">Roll Number</label>
+                        <input type="text" id="forgot-rollnumber" class="form-control" placeholder="Enter your roll number">
+                    </div>
+                    
+                    <!-- Host fields (email) -->
+                    <div class="form-group" id="forgotHostField" style="display: none;">
+                        <label for="forgot-email">Email</label>
+                        <input type="email" id="forgot-email" class="form-control" placeholder="Enter your email">
+                        
+                        <div class="form-group" style="margin-top: 10px;">
+                            <label for="forgot-secret-key">Host Secret Key</label>
+                            <input type="password" id="forgot-secret-key" class="form-control" placeholder="Enter host secret key">
+                        </div>
+                    </div>
+                </div>
+                <div class="popup-actions">
+                    <button type="button" id="requestResetOtpBtn" class="verify-otp-btn">Send Reset OTP</button>
+                    <button type="button" class="resend-otp-btn popup-close">Cancel</button>
+                </div>
+            </div>
+            
+            <!-- Step 2: Enter OTP -->
+            <div class="forgot-password-step" id="forgotPasswordStep2" style="display: none;">
+                <div class="popup-content">
+                    <p>Enter the 6-digit verification code sent to your phone</p>
+                    <div class="otp-input-container-popup">
+                        <input type="text" id="forgot-otp-input" class="form-control" placeholder="Enter 6-digit OTP" maxlength="6">
+                    </div>
+                    <div class="otp-timer" id="forgotOtpTimer">OTP expires in: 60 seconds</div>
+                    <div class="otp-verification-status" id="forgotOtpStatus"></div>
+                </div>
+                <div class="popup-actions">
+                    <button type="button" id="verifyResetOtpBtn" class="verify-otp-btn">Verify OTP</button>
+                    <button type="button" id="resendResetOtpBtn" class="resend-otp-btn">Resend OTP</button>
+                </div>
+            </div>
+            
+            <!-- Step 3: Create New Password -->
+            <div class="forgot-password-step" id="forgotPasswordStep3" style="display: none;">
+                <div class="popup-content">
+                    <p>Create a new password</p>
+                    <div class="form-group">
+                        <label for="new-password">New Password</label>
+                        <div class="password-field">
+                            <input type="password" id="new-password" class="form-control" placeholder="Enter new password">
+                            <div class="password-toggle" id="newPasswordToggle"><i class="fas fa-eye"></i></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm-new-password">Confirm New Password</label>
+                        <div class="password-field">
+                            <input type="password" id="confirm-new-password" class="form-control" placeholder="Confirm new password">
+                            <div class="password-toggle" id="confirmNewPasswordToggle"><i class="fas fa-eye"></i></div>
+                        </div>
+                    </div>
+                    <div class="otp-verification-status" id="passwordResetStatus"></div>
+                </div>
+                <div class="popup-actions">
+                    <button type="button" id="resetPasswordBtn" class="verify-otp-btn">Reset Password</button>
+                    <button type="button" class="resend-otp-btn popup-close">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Popup -->
+    <div class="popup-overlay" id="popupOverlay">
+        <div class="popup">
+            <div class="popup-header">
+                <div class="popup-icon" id="popupIcon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h3 class="popup-title" id="popupTitle">Notification</h3>
+            </div>
+            <div class="popup-content" id="popupMessage">
+                Message content will appear here.
+            </div>
+            <button class="popup-close" id="popupClose">Close</button>
+        </div>
+    </div>
+    <!-- OTP Verification Popup -->
+    <div class="popup-overlay" id="otpPopupOverlay">
+        <div class="popup otp-popup">
+            <div class="popup-header">
+                <div class="popup-icon success">
+                    <i class="fas fa-mobile-alt"></i>
+                </div>
+                <h3 class="popup-title">Phone Verification</h3>
+            </div>
+            <div class="popup-content">
+                <p>Enter the 6-digit verification code sent to your phone</p>
+                <div class="otp-input-container-popup">
+                    <input type="text" id="otp-input-popup" class="form-control" placeholder="Enter 6-digit OTP" maxlength="6">
+                </div>
+                <div class="otp-timer" id="otpTimerPopup">OTP expires in: 60 seconds</div>
+                <div class="otp-verification-status" id="otpStatusPopup"></div>
+            </div>
+            <div class="popup-actions">
+                <button type="button" id="verifyOtpBtn" class="verify-otp-btn">Verify OTP</button>
+                <button type="button" id="resendOtpBtn" class="resend-otp-btn">Resend OTP</button>
+            </div>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <script>
+        // Convert flash messages to user-friendly format
+        {% for category, message in messages %}
+            // Get proper elements
+            const overlay = document.getElementById('popupOverlay');
+            const icon = document.getElementById('popupIcon');
+            const title = document.getElementById('popupTitle');
+            const popupMessage = document.getElementById('popupMessage');
+            
+            // Set icon and title based on message type
+            if ("{{ category }}" === "error") {
+                icon.className = "popup-icon error";
+                icon.innerHTML = '<i class="fas fa-exclamation-circle"></i>';
+                title.textContent = "Registration Failed";
+                
+                // Convert technical errors to user-friendly messages
+                let userMessage = "{{ message }}";
+                
+                // Check for common error messages and provide friendly alternatives
+                if (userMessage.includes("Data too long for column 'password'")) {
+                    userMessage = "We're experiencing a technical issue with our system. Please try again later or contact support.";
+                } else if (userMessage.includes("duplicate entry") || userMessage.includes("Duplicate entry")) {
+                    userMessage = "This account already exists. Please try logging in instead.";
+                } else if (userMessage.includes("roll number") || userMessage.includes("Roll number")) {
+                    userMessage = "Please check your roll number format and try again.";
+                }
+                
+                popupMessage.textContent = userMessage;
+            } else {
+                icon.className = "popup-icon success";
+                icon.innerHTML = '<i class="fas fa-check-circle"></i>';
+                title.textContent = "Success";
+                popupMessage.textContent = "{{ message }}";
+            }
+            
+            // Show the popup
+            overlay.classList.add('active');
+        {% endfor %}
+    </script>
+    {% endif %}
+    {% endwith %}
+    <script src="{{ url_for('static', filename='login.js') }}"></script>
+</body>
+</html>    

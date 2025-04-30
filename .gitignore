@@ -1,0 +1,23 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+venv/
+.env
+
+# OS files
+.DS_Store
+
+# IDE folders
+.vscode/
+
+# Ignore sensitive files
+.env
+config.py
+app.py
+
+# Ignore any other files that contain sensitive information or local files
+*.log
+*.sqlite3
+

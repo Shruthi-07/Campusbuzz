@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: flask-web
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app  
+    envVars:
+      - key: TWILIO_ACCOUNT_SID
+        value: AC31c5efefe00cd49db254857ca9dc7c78
+      - key: TWILIO_AUTH_TOKEN
+        value: 89e36c493f8454528be409ec5560f8c9
+      - key: DB_HOST
+        value: your-database-host
+      - key: localhost
+        value: your-database-username
+      - key: shruthi@123
+        value: your-database-password
+      - key: DB_NAME
+        value: campusbuzz
