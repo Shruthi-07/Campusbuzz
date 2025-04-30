@@ -21,3 +21,11 @@ app.py
 *.log
 *.sqlite3
 
+.env
+__pycache__/
+*.pyc
+instance/
+*.sqlite3
+*.db
+static/uploads/
+
