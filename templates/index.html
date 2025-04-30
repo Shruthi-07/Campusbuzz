@@ -7,11 +7,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
-    <script>
-        window.addEventListener("beforeunload", function () {
-            localStorage.setItem("scrollY", window.scrollY);
-        });
-    </script>
 </head>
 <body id="home">
     <!-- Header with Navigation -->
@@ -402,13 +397,6 @@
                 setTimeout(closeModal, 4000);
             }
         });
-        document.addEventListener("DOMContentLoaded", function () {
-            const y = localStorage.getItem("scrollY");
-            if (y !== null) {
-                window.scrollTo(0, parseInt(y));
-                localStorage.removeItem("scrollY");
-            }
-        });
-        </script>
+    </script>
 </body>
 </html>
