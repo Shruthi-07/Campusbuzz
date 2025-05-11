@@ -52,7 +52,6 @@
             <ul class="sidebar-menu">
                 <li class="active" data-target="profile"><i class="fas fa-user"></i> My Profile</li>
                 <li data-target="registered-events"><i class="fas fa-calendar-check"></i> Registered Events</li>
-                <li data-target="past-events"><i class="fas fa-history"></i> Past Events</li>
             </ul>
         </div>
 
@@ -142,55 +141,6 @@
                             <i class="fas fa-calendar-times"></i>
                             <p>You haven't registered for any upcoming events yet.</p>
                             <a href="{{ url_for('index') }}#events-section" class="browse-btn">Browse Events</a>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-           <!-- Past Events Section -->
-            <div class="content-section" id="past-events">
-                <h2>My Past Events</h2>
-                <div class="events-grid">
-                    {% if past_events %}
-                        {% for event in past_events %}
-                            <div class="event-card past">
-                                <div class="event-image">
-                                    {% if event.image_url %}
-                                        <img src="{{ url_for('static', filename=event.image_url) }}" alt="{{ event.title }}">
-                                    {% else %}
-                                        <img src="{{ url_for('static', filename='default-event.jpg') }}" alt="Default Event Image">
-                                    {% endif %}
-                                    <div class="event-type {{ event.event_type|lower }}">{{ event.event_type }}</div>
-                                </div>
-                                <div class="event-info">
-                                    <h3>{{ event.title }}</h3>
-                                    <p class="event-meta">
-                                        <i class="fas fa-calendar-day"></i> 
-                                        {{ event.date.strftime('%d %B, %Y') if event.date else 'N/A' }} &nbsp;
-                                        <i class="fas fa-clock"></i>
-                                        {% if event.time and event.time.__class__.__name__ == 'timedelta' %}
-                                            {{ (event.time.seconds // 3600) | string | zfill(2) }}:{{ ((event.time.seconds // 60) % 60) | string | zfill(2) }}
-                                        {% elif event.time %}
-                                            {{ event.time.strftime('%I:%M %p') }}
-                                        {% else %}
-                                            N/A
-                                        {% endif %}
-                                    </p>
-                                    <p class="event-meta">
-                                        <i class="fas fa-map-marker-alt"></i> {{ event.venue }}
-                                    </p>
-                                    <p class="event-meta">
-                                        <i class="fas fa-user"></i> {{ event.host_name }} ({{ event.department_club }})
-                                    </p>
-                                    <div class="event-status">
-                                        <span class="completed-badge">Completed</span>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="no-events-message">
-                            <i class="fas fa-history"></i>
-                            <p>You haven't participated in any past events yet.</p>
                         </div>
                     {% endif %}
                 </div>
