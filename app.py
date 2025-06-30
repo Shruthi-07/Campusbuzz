@@ -4,11 +4,9 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from flask_mysqldb import MySQL
-import MySQLdb.cursors
+from pymysql.cursors import DictCursor  # ✅ Correct cursor
 from twilio.rest import Client
 from dotenv import load_dotenv
-import os
-from twilio.rest import Client
 import pymysql
 pymysql.install_as_MySQLdb()
 
@@ -59,7 +57,7 @@ def allowed_file(filename):
 @app.route('/')
 def index():
     # Fetch upcoming events for display
-    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor = mysql.connection.cursor(DictCursor)  # ✅ updated here
     cursor.execute('''
         SELECT e.*, h.name as host_name, h.department_club as department_club 
         FROM events e 
@@ -71,6 +69,7 @@ def index():
     cursor.close()
     
     return render_template('index.html', logged_in='email' in session, events=events)
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
