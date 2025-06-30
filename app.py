@@ -1,75 +1,69 @@
 import os, re, time, random, secrets
 from datetime import datetime, timedelta, date
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from flask_mysqldb import MySQL
-from pymysql.cursors import DictCursor  # ✅ Correct cursor
-from twilio.rest import Client
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
 from dotenv import load_dotenv
+from twilio.rest import Client
 import pymysql
 pymysql.install_as_MySQLdb()
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
-@app.template_filter('zfill')
-def jinja2_zfill(value, width):
-    """Pad a string with zeros to a specific width."""
-    return str(value).zfill(width)
-app.secret_key = os.getenv('SECRET_KEY', 'fallback_secret')  # Required for session handling
-HOST_SECRET_KEY = 'hostkey456'  # Used only to verify host registration/login
+app.secret_key = os.getenv('SECRET_KEY', 'fallback_secret')
+HOST_SECRET_KEY = 'hostkey456'
 
-# File upload configuration
+# File upload config
 UPLOAD_FOLDER = os.path.join('static', 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
-
-# Ensure upload directories exist
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'event_images'), exist_ok=True)
 
-# Twilio Configuration
+# Twilio config
 TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
 TWILIO_PHONE_NUMBER = os.getenv('TWILIO_PHONE_NUMBER')
-
 client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-
 otp_store = {}
 
-# MySQL Configuration
-app.config['MYSQL_HOST'] = os.getenv('MYSQL_HOST')
-app.config['MYSQL_USER'] = os.getenv('MYSQL_USER')
-app.config['MYSQL_PASSWORD'] = os.getenv('MYSQL_PASSWORD')
-app.config['MYSQL_DB'] = os.getenv('MYSQL_DB')
-app.config['MYSQL_PORT'] = int(os.getenv('MYSQL_PORT', 3306))
-
-# Session timeout configuration
+# DB config (SQLAlchemy)
+app.config['SQLALCHEMY_DATABASE_URI'] = (
+    f"mysql+pymysql://{os.getenv('MYSQL_USER')}:{os.getenv('MYSQL_PASSWORD')}@"
+    f"{os.getenv('MYSQL_HOST')}:{os.getenv('MYSQL_PORT')}/{os.getenv('MYSQL_DB')}"
+)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
 
-mysql = MySQL(app)
+db = SQLAlchemy(app)
+
+@app.template_filter('zfill')
+def jinja2_zfill(value, width):
+    return str(value).zfill(width)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/')
 def index():
-    # Fetch upcoming events for display
-    cursor = mysql.connection.cursor(DictCursor)  # ✅ updated here
-    cursor.execute('''
-        SELECT e.*, h.name as host_name, h.department_club as department_club 
-        FROM events e 
-        JOIN host h ON e.host_id = h.id 
-        WHERE e.date >= CURDATE() 
-        ORDER BY e.date ASC, e.time ASC
-    ''')
-    events = cursor.fetchall()
-    cursor.close()
-    
-    return render_template('index.html', logged_in='email' in session, events=events)
+    try:
+        result = db.session.execute(text('''
+            SELECT e.*, h.name as host_name, h.department_club as department_club 
+            FROM events e 
+            JOIN host h ON e.host_id = h.id 
+            WHERE e.date >= CURDATE() 
+            ORDER BY e.date ASC, e.time ASC
+        '''))
+        events = result.mappings().all()
+    except Exception as e:
+        print("Database error:", e)
+        events = []
 
+    return render_template('index.html', logged_in='email' in session, events=events)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
