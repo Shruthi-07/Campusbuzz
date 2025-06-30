@@ -9,6 +9,8 @@ from twilio.rest import Client
 from dotenv import load_dotenv
 import os
 from twilio.rest import Client
+import pymysql
+pymysql.install_as_MySQLdb()
 
 # Load environment variables from .env file
 load_dotenv()
