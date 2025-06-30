@@ -1,4 +1,4 @@
-import os, re, time, random, secrets
+import os, re, csv, io, time, random, secrets
 from datetime import datetime, timedelta, date
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -291,34 +291,276 @@ def host_dashboard():
         past_events=past_events
     )
 
+def generate_otp():
+    """Generate a 6-digit OTP"""
+    return str(random.randint(100000, 999999))
+
+def send_otp(phone_number, otp):
+    """Send OTP via Twilio SMS"""
+    try:
+        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        message = client.messages.create(
+            body=f"Your CampusBuzz verification code is: {otp}. Valid for 60 seconds.",
+            from_=TWILIO_PHONE_NUMBER,
+            to=phone_number
+        )
+        return True, message.sid
+    except Exception as e:
+        print(f"Error sending OTP: {str(e)}")
+        return False, str(e)
+    
 @app.route('/send-otp', methods=['POST'])
 def send_otp_route():
     data = request.get_json()
     phone_number = data.get('phone_number')
-    usertype = data.get('usertype', 'student')
+    usertype = data.get('usertype', 'student')  # default to student if not provided
 
+    # Basic phone number format validation
     if not phone_number or not re.match(r'^\+?[1-9]\d{9,14}$', phone_number):
-        return jsonify({'success': False, 'message': 'Invalid phone number format. Include country code (e.g., +91).'})
+        return jsonify({
+            'success': False,
+            'message': 'Invalid phone number format. Please include country code (e.g., +91).'
+        })
 
-    check_query = text('SELECT * FROM student WHERE phone_number = :phone') if usertype == 'student' \
-        else text('SELECT * FROM host WHERE phone_number = :phone')
+    # Check if phone number already exists in DB
+    if usertype == 'student':
+        user = db.session.execute(
+            text("SELECT id FROM student WHERE phone_number = :phone"),
+            {"phone": phone_number}
+        ).mappings().first()
+        if user:
+            return jsonify({
+                'success': False,
+                'message': 'This phone number is already registered as a student. Please use a different number.'
+            })
+    elif usertype == 'host':
+        user = db.session.execute(
+            text("SELECT id FROM host WHERE phone_number = :phone"),
+            {"phone": phone_number}
+        ).mappings().first()
+        if user:
+            return jsonify({
+                'success': False,
+                'message': 'This phone number is already registered as a host. Please use a different number.'
+            })
 
-    exists = db.session.execute(check_query, {"phone": phone_number}).first()
-    if exists:
-        return jsonify({'success': False, 'message': f'This phone number is already registered as a {usertype}.'})
-
+    # Generate 6-digit OTP
     otp = generate_otp()
+
+    # Store in session with expiry
     session['otp'] = otp
     session['otp_phone'] = phone_number
     session['otp_usertype'] = usertype
     session['otp_expires'] = (datetime.now() + timedelta(seconds=60)).timestamp()
 
+    # DEBUG mode behavior
     if app.debug:
         print(f"DEBUG - OTP for {phone_number} ({usertype}): {otp}")
         return jsonify({'success': True, 'message': 'OTP sent (debug mode).'})
 
+    # Send using Twilio
     success, message = send_otp(phone_number, otp)
-    return jsonify({'success': success, 'message': 'OTP sent successfully' if success else f'Failed: {message}'})
+    if success:
+        return jsonify({'success': True, 'message': 'OTP sent successfully'})
+    else:
+        return jsonify({'success': False, 'message': f'Failed to send OTP: {message}'})
+
+@app.route('/verify-otp', methods=['POST'])
+def verify_otp():
+    data = request.get_json()
+    user_otp = data.get('otp')
+    
+    stored_otp = session.get('otp')
+    otp_expires = session.get('otp_expires')
+    
+    if not stored_otp:
+        return jsonify({'success': False, 'message': 'OTP session expired, please request a new OTP'})
+    
+    # Check if OTP has expired
+    if datetime.now().timestamp() > otp_expires:
+        # Clear expired OTP from session
+        session.pop('otp', None)
+        session.pop('otp_expires', None)
+        return jsonify({'success': False, 'message': 'OTP has expired, please request a new OTP'})
+    
+    if user_otp == stored_otp:
+        session['verified_phone'] = session.get('otp_phone')
+        return jsonify({'success': True, 'message': 'Phone number verified successfully'})
+    else:
+        return jsonify({'success': False, 'message': 'Invalid OTP, please try again'})
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        usertype = request.form['usertype']
+        phone_number = request.form['phone_number']
+
+        if session.get('verified_phone') != phone_number:
+            flash('Phone number not verified. Please verify your phone number with OTP.', 'error')
+            return redirect(url_for('login'))
+
+        password = request.form['password']
+        confirm_password = request.form.get('confirm-password', '')
+
+        if password != confirm_password:
+            flash('Passwords do not match.', 'error')
+            return redirect(url_for('login'))
+
+        if usertype == 'student':
+            name = request.form['name']
+            email = request.form['email']
+            roll_number = request.form['roll_number']
+            department = request.form['department']
+            password_hash = generate_password_hash(password)
+
+            if not re.match(r'^4MC\d{2}[A-Z]{2}\d{3}$', roll_number):
+                flash('Invalid roll number format. Expected format: 4MCxxYYzzz', 'error')
+                return redirect(url_for('login'))
+
+            if not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', email):
+                flash('Invalid email format.', 'error')
+                return redirect(url_for('login'))
+
+            try:
+                existing = db.session.execute(
+                    text("SELECT * FROM student WHERE roll_number = :roll OR email = :email"),
+                    {"roll": roll_number, "email": email}
+                ).mappings().first()
+
+                if existing:
+                    flash('Roll number or email already registered.', 'error')
+                    return redirect(url_for('login'))
+
+                db.session.execute(text("""
+                    INSERT INTO student (name, email, roll_number, department, phone_number, password)
+                    VALUES (:name, :email, :roll, :dept, :phone, :pwd)
+                """), {
+                    "name": name, "email": email, "roll": roll_number, "dept": department,
+                    "phone": phone_number, "pwd": password_hash
+                })
+                db.session.commit()
+
+                flash(f"Student account created successfully for {name}", 'success')
+            except Exception as e:
+                db.session.rollback()
+                flash(f"Registration failed: {str(e)}", 'error')
+
+        elif usertype == 'host':
+            name = request.form['name']
+            email = request.form['email']
+            designation = request.form['designation']
+            department_club = request.form['department_club']
+            secret_key = request.form.get('secret_key', '')
+            password_hash = generate_password_hash(password)
+
+            if not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', email):
+                flash('Invalid email format.', 'error')
+                return redirect(url_for('login'))
+
+            if secret_key != HOST_SECRET_KEY:
+                flash('Invalid host secret key.', 'error')
+                return redirect(url_for('login'))
+
+            try:
+                existing = db.session.execute(
+                    text("SELECT * FROM host WHERE email = :email"),
+                    {"email": email}
+                ).mappings().first()
+
+                if existing:
+                    flash('Email already registered as host.', 'error')
+                    return redirect(url_for('login'))
+
+                db.session.execute(text("""
+                    INSERT INTO host (name, email, designation, department_club, phone_number, password)
+                    VALUES (:name, :email, :designation, :dept_club, :phone, :pwd)
+                """), {
+                    "name": name, "email": email, "designation": designation,
+                    "dept_club": department_club, "phone": phone_number, "pwd": password_hash
+                })
+                db.session.commit()
+
+                flash(f"Host account created successfully for {name}", 'success')
+            except Exception as e:
+                db.session.rollback()
+                flash(f"Host registration failed: {str(e)}", 'error')
+
+        # Clear OTP session
+        for key in ['otp', 'otp_phone', 'otp_expires', 'verified_phone']:
+            session.pop(key, None)
+
+        return redirect(url_for('login'))
+
+@app.route('/create_event', methods=['POST'])
+def create_event():
+    if 'loggedin' not in session or session.get('usertype') != 'host':
+        flash('You must be logged in as a host to create events', 'error')
+        return redirect(url_for('login'))
+
+    # Get form data
+    title = request.form['title']
+    description = request.form['description']
+    date = request.form['date']
+    time_str = request.form['time']
+    venue = request.form['venue']
+    capacity = request.form['capacity']
+    event_type = request.form['event_type']
+    registration_deadline = request.form['registration_deadline']
+
+    try:
+        event_date_obj = datetime.strptime(date, "%Y-%m-%d")
+        registration_deadline_obj = datetime.strptime(registration_deadline, "%Y-%m-%dT%H:%M")
+        event_end_of_day = datetime.combine(event_date_obj, datetime.max.time())
+
+        if registration_deadline_obj > event_end_of_day:
+            flash('Registration deadline must be on or before the event day.', 'error')
+            return redirect(url_for('host_dashboard'))
+
+    except ValueError:
+        flash('Invalid date format.', 'error')
+        return redirect(url_for('host_dashboard'))
+
+    # Validate image upload
+    if 'event_image' not in request.files or request.files['event_image'].filename == '':
+        flash('Event poster is required. Please upload an event image.', 'error')
+        return redirect(url_for('host_dashboard'))
+
+    file = request.files['event_image']
+    if not allowed_file(file.filename):
+        flash('Invalid image format. Allowed formats are: png, jpg, jpeg, gif.', 'error')
+        return redirect(url_for('host_dashboard'))
+
+    filename = f"event_{datetime.now().strftime('%Y%m%d%H%M%S')}_{secure_filename(file.filename)}"
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], 'event_images', filename)
+    file.save(filepath)
+    image_url = f"uploads/event_images/{filename}"
+
+    # Save to database using SQLAlchemy
+    try:
+        db.session.execute(text('''
+            INSERT INTO events (host_id, title, description, date, time, venue, capacity, 
+                                event_type, image_url, registration_deadline)
+            VALUES (:host_id, :title, :desc, :date, :time, :venue, :capacity, 
+                    :etype, :img_url, :deadline)
+        '''), {
+            "host_id": session['user_id'],
+            "title": title,
+            "desc": description,
+            "date": date,
+            "time": time_str,
+            "venue": venue,
+            "capacity": capacity,
+            "etype": event_type,
+            "img_url": image_url,
+            "deadline": registration_deadline
+        })
+        db.session.commit()
+        flash('Event created successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Failed to create event: {str(e)}", 'error')
+
+    return redirect(url_for('host_dashboard'))
 
 @app.route('/get_event_registrations/<int:event_id>')
 def get_event_registrations(event_id):
@@ -357,15 +599,17 @@ def download_registrations(event_id):
         flash('You must be logged in as a host to download registrations', 'error')
         return redirect(url_for('login'))
 
-    event = db.session.execute(
-        text("SELECT title FROM events WHERE id = :eid AND host_id = :hid"),
-        {"eid": event_id, "hid": session['user_id']}
-    ).mappings().first()
+    # Verify that the host owns the event
+    event = db.session.execute(text('''
+        SELECT title FROM events 
+        WHERE id = :eid AND host_id = :hid
+    '''), {"eid": event_id, "hid": session['user_id']}).mappings().first()
 
     if not event:
         flash('Event not found or unauthorized', 'error')
         return redirect(url_for('host_dashboard'))
 
+    # Fetch registrations
     registrations = db.session.execute(text('''
         SELECT s.name, s.roll_number, s.email, s.phone_number, s.department, 
                er.registration_date
@@ -375,21 +619,37 @@ def download_registrations(event_id):
         ORDER BY er.registration_date
     '''), {"eid": event_id}).mappings().all()
 
+    # Generate CSV content
+    import csv
+    import io
+    from flask import Response
+
     output = io.StringIO()
     writer = csv.writer(output)
+    
+    # Write CSV header
     writer.writerow(['Name', 'Roll Number', 'Email', 'Phone', 'Department', 'Registration Date'])
 
+    # Write CSV data rows
     for reg in registrations:
         writer.writerow([
-            reg['name'], reg['roll_number'], reg['email'], reg['phone_number'],
-            reg['department'], reg['registration_date'].strftime('%Y-%m-%d %H:%M')
+            reg['name'],
+            reg['roll_number'],
+            reg['email'],
+            reg['phone_number'],
+            reg['department'],
+            reg['registration_date'].strftime('%Y-%m-%d %H:%M')
         ])
 
-    return Response(
+    # Return as downloadable response
+    response = Response(
         output.getvalue(),
         mimetype='text/csv',
-        headers={'Content-Disposition': f'attachment; filename=registrations_{event_id}.csv'}
+        headers={
+            'Content-Disposition': f'attachment; filename=registrations_{event_id}.csv'
+        }
     )
+    return response
 
 @app.route('/cancel_event/<int:event_id>', methods=['POST'])
 def cancel_event(event_id):
