@@ -716,31 +716,40 @@ def get_event_registrations(event_id):
     if 'loggedin' not in session or session.get('usertype') != 'host':
         return jsonify({'success': False, 'message': 'Not logged in'})
 
-    event = db.session.execute(
-        text("SELECT title FROM events WHERE id = :eid AND host_id = :hid"),
-        {"eid": event_id, "hid": session['user_id']}
-    ).mappings().first()
+    try:
+        event = db.session.execute(
+            text("SELECT title FROM events WHERE id = :eid AND host_id = :hid"),
+            {"eid": event_id, "hid": session['user_id']}
+        ).mappings().first()
 
-    if not event:
-        return jsonify({'success': False, 'message': 'Event not found or unauthorized'})
+        if not event:
+            return jsonify({'success': False, 'message': 'Event not found or unauthorized'})
 
-    registrations = db.session.execute(text('''
-        SELECT s.name, s.roll_number, s.email, s.phone_number, s.department, 
-               er.registration_date
-        FROM event_registrations er
-        JOIN student s ON er.student_id = s.id
-        WHERE er.event_id = :eid
-        ORDER BY er.registration_date
-    '''), {"eid": event_id}).mappings().all()
+        registrations = db.session.execute(text('''
+            SELECT s.name, s.roll_number, s.email, s.phone_number, s.department, 
+                   COALESCE(er.registration_date, NOW()) as registration_date
+            FROM event_registrations er
+            JOIN student s ON er.student_id = s.id
+            WHERE er.event_id = :eid
+            ORDER BY er.registration_date DESC
+        '''), {"eid": event_id}).mappings().all()
 
-    for reg in registrations:
-        reg['registration_date'] = reg['registration_date'].strftime('%Y-%m-%d %H:%M')
+        # Convert to list and format dates
+        registration_list = []
+        for reg in registrations:
+            reg_dict = dict(reg)
+            reg_dict['registration_date'] = reg_dict['registration_date'].strftime('%Y-%m-%d %H:%M')
+            registration_list.append(reg_dict)
 
-    return jsonify({
-        'success': True,
-        'event_title': event['title'],
-        'registrations': registrations
-    })
+        return jsonify({
+            'success': True,
+            'event_title': event['title'],
+            'registrations': registration_list
+        })
+        
+    except Exception as e:
+        print(f"Error in get_event_registrations: {str(e)}")
+        return jsonify({'success': False, 'message': f'Database error: {str(e)}'})
 
 @app.route('/download_registrations/<int:event_id>')
 def download_registrations(event_id):
