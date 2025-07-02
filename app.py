@@ -490,7 +490,156 @@ def register():
             session.pop(key, None)
 
         return redirect(url_for('login'))
+# Replace your existing forgot password routes with these SQLAlchemy versions
 
+@app.route('/request-reset-otp', methods=['POST'])
+def request_reset_otp():
+    data = request.get_json()
+    identifier = data.get('identifier')
+    usertype = data.get('usertype')
+    secret_key = data.get('secret_key', '')
+    
+    # Validate inputs
+    if not identifier or not usertype:
+        return jsonify({'success': False, 'message': 'Missing required information'})
+    
+    # For host users, validate secret key
+    if usertype == 'host' and secret_key != HOST_SECRET_KEY:
+        return jsonify({'success': False, 'message': 'Invalid host secret key'})
+    
+    try:
+        # Find user in database using SQLAlchemy
+        if usertype == 'student':
+            user = db.session.execute(
+                text('SELECT * FROM student WHERE roll_number = :identifier'),
+                {'identifier': identifier}
+            ).mappings().first()
+        else:  # host
+            user = db.session.execute(
+                text('SELECT * FROM host WHERE email = :identifier'),
+                {'identifier': identifier}
+            ).mappings().first()
+            
+        if not user:
+            return jsonify({'success': False, 'message': f'No {usertype} account found with the provided details'})
+        
+        # Get the user's phone number
+        phone_number = user.get('phone_number')
+        
+        if not phone_number:
+            return jsonify({'success': False, 'message': 'No phone number associated with this account'})
+        
+        # Generate OTP
+        otp = generate_otp()
+        
+        # Store reset OTP in session
+        session['reset_otp'] = otp
+        session['reset_phone'] = phone_number
+        session['reset_identifier'] = identifier
+        session['reset_usertype'] = usertype
+        session['reset_otp_expires'] = (datetime.now() + timedelta(seconds=60)).timestamp()
+        
+        # In development mode, print OTP to console instead of sending
+        if app.debug:
+            print(f"DEBUG - Reset OTP for {identifier} ({usertype}): {otp}")
+            return jsonify({'success': True, 'message': 'OTP sent successfully (check console in debug mode)'})
+        
+        # Send OTP via Twilio in production
+        success, message = send_otp(phone_number, otp)
+        
+        if success:
+            return jsonify({'success': True, 'message': 'OTP sent successfully'})
+        else:
+            return jsonify({'success': False, 'message': f'Failed to send OTP: {message}'})
+            
+    except Exception as e:
+        print(f"Error in request-reset-otp: {str(e)}")
+        return jsonify({'success': False, 'message': 'An error occurred while processing your request'})
+
+@app.route('/verify-reset-otp', methods=['POST'])
+def verify_reset_otp():
+    data = request.get_json()
+    user_otp = data.get('otp')
+    
+    # Validate session data
+    stored_otp = session.get('reset_otp')
+    stored_identifier = session.get('reset_identifier')
+    stored_usertype = session.get('reset_usertype')
+    otp_expires = session.get('reset_otp_expires')
+    
+    if not stored_otp or not stored_identifier or not stored_usertype:
+        return jsonify({'success': False, 'message': 'Reset session expired, please start over'})
+    
+    # Check if OTP has expired
+    if datetime.now().timestamp() > otp_expires:
+        # Clear expired session data
+        for key in ['reset_otp', 'reset_phone', 'reset_identifier', 'reset_usertype', 'reset_otp_expires']:
+            session.pop(key, None)
+        return jsonify({'success': False, 'message': 'OTP has expired, please request a new one'})
+    
+    # Verify OTP
+    if user_otp == stored_otp:
+        # Store verification status in session
+        session['reset_verified'] = True
+        return jsonify({'success': True, 'message': 'OTP verified successfully'})
+    else:
+        return jsonify({'success': False, 'message': 'Invalid OTP, please try again'})
+
+@app.route('/reset-password', methods=['POST'])
+def reset_password():
+    # Check if user has verified OTP
+    if not session.get('reset_verified'):
+        return jsonify({'success': False, 'message': 'Please verify your OTP first'})
+    
+    data = request.get_json()
+    identifier = data.get('identifier')
+    usertype = data.get('usertype')
+    new_password = data.get('new_password')
+    
+    # Validate inputs
+    if not identifier or not usertype or not new_password:
+        return jsonify({'success': False, 'message': 'Missing required information'})
+    
+    # Verify identifier and usertype match session
+    if identifier != session.get('reset_identifier') or usertype != session.get('reset_usertype'):
+        return jsonify({'success': False, 'message': 'Invalid request, please start over'})
+    
+    # Validate password length
+    if len(new_password) < 6:
+        return jsonify({'success': False, 'message': 'Password must be at least 6 characters long'})
+    
+    # Hash new password
+    password_hash = generate_password_hash(new_password)
+    
+    try:
+        # Update password in database using SQLAlchemy
+        if usertype == 'student':
+            result = db.session.execute(
+                text('UPDATE student SET password = :password WHERE roll_number = :identifier'),
+                {'password': password_hash, 'identifier': identifier}
+            )
+        else:  # host
+            result = db.session.execute(
+                text('UPDATE host SET password = :password WHERE email = :identifier'),
+                {'password': password_hash, 'identifier': identifier}
+            )
+            
+        db.session.commit()
+        
+        if result.rowcount == 0:
+            return jsonify({'success': False, 'message': 'Failed to update password'})
+        
+        # Clear reset session data
+        for key in ['reset_otp', 'reset_phone', 'reset_identifier', 'reset_usertype', 'reset_otp_expires', 'reset_verified']:
+            session.pop(key, None)
+        
+        return jsonify({'success': True, 'message': 'Password updated successfully'})
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error in reset-password: {str(e)}")
+        return jsonify({'success': False, 'message': 'An error occurred while resetting your password'})
+    
 @app.route('/create_event', methods=['POST'])
 def create_event():
     if 'loggedin' not in session or session.get('usertype') != 'host':
